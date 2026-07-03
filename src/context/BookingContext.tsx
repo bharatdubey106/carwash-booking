@@ -19,7 +19,7 @@ export type BookingStep =
   | 'success';
 
 export type ServiceType = 'slot' | 'pickup';
-export type VehicleType = 'hatchback' | 'sedan' | 'suv' | 'bike';
+export type VehicleType = 'hatchback' | 'sedan' | 'suv' | 'muv_van' | 'truck_commercial' | 'two_wheeler';
 
 const STEP_ORDER: BookingStep[] = [
   'service-selection',

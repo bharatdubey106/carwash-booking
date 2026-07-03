@@ -24,7 +24,7 @@ export async function getActiveServices(centerId?: string) {
   if (error) {
     return { success: false as const, error: 'Could not load services right now.' };
   }
-  return { success: true as const, data };
+  return { success: true as const, data: data as any[]};
 }
 
 // ============================================================
@@ -44,7 +44,7 @@ export async function getOpenCenters() {
   if (error) {
     return { success: false as const, error: 'Could not load service centers right now.' };
   }
-  return { success: true as const, data };
+  return { success: true as const, data: data as any[] };
 }
 
 // ============================================================
@@ -280,5 +280,5 @@ export async function createBooking(input: CreateBookingInput) {
 
   revalidatePath(`/booking/${data.centerId}`);
 
-  return { success: true as const, data: inserted };
+  return { success: true as const, data: inserted as any};
 }
