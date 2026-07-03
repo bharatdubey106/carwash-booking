@@ -1,17 +1,18 @@
-mport { createServerClient } from '@supabase/ssr';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import type { Database } from '@/types/database.types';
- 
+
 export async function createClient() {
   const cookieStore = await cookies();
- 
+
   return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         getAll() {
-          return cookieStore.getAll();
+          // Explicitly call it from the resolved cookieStore instance
+          return Array.from(cookieStore.getAll());
         },
         setAll(cookiesToSet) {
           try {
@@ -19,8 +20,7 @@ export async function createClient() {
               cookieStore.set(name, value, options);
             });
           } catch {
-            // Called from a Server Component during render — safe to ignore
-            // because middleware.ts refreshes the session on every request.
+            // Safe to ignore during server component rendering
           }
         },
       },

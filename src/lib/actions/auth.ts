@@ -47,7 +47,7 @@ async function loginWithRole(
     .eq('id', signInData.user.id)
     .single();
 
-  if (profileError || !profile || profile.role !== requiredRole) {
+  if (profileError || !profile || (profile as any).role !== requiredRole) {
     // Credentials were valid but this account has no business in this portal.
     // Never leave an authenticated session behind for the wrong role.
     await supabase.auth.signOut();
