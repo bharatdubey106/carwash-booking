@@ -1,4 +1,3 @@
-// lib/actions/bookings.ts
 'use server';
 
 import { z } from 'zod';
@@ -19,12 +18,12 @@ export async function getActiveServices(centerId?: string) {
 
   if (centerId) query = query.eq('center_id', centerId);
 
-  const { data, error } = await query;
+  const { data, error } = (await query) as any;
 
   if (error) {
     return { success: false as const, error: 'Could not load services right now.' };
   }
-  return { success: true as const, data: data as any[]};
+  return { success: true as const, data };
 }
 
 // ============================================================
@@ -33,18 +32,18 @@ export async function getActiveServices(centerId?: string) {
 export async function getOpenCenters() {
   const supabase = await createClient();
 
-  const { data, error } = await supabase
+  const { data, error } = (await supabase
     .from('centers')
     .select(
       'id, name, slug, address, city, latitude, longitude, phone, cover_image_url, opens_at, closes_at, slot_duration_minutes, supports_pickup, pickup_radius_km'
     )
     .eq('is_active', true)
-    .order('name', { ascending: true });
+    .order('name', { ascending: true })) as any;
 
   if (error) {
     return { success: false as const, error: 'Could not load service centers right now.' };
   }
-  return { success: true as const, data: data as any[] };
+  return { success: true as const, data };
 }
 
 // ============================================================
@@ -80,30 +79,30 @@ export async function getAvailableSlots(input: z.infer<typeof availabilityInputS
 
   const supabase = await createClient();
 
-  const { data: center, error: centerError } = await supabase
+  const { data: center, error: centerError } = (await supabase
     .from('centers')
     .select('opens_at, closes_at, slot_duration_minutes, is_active')
     .eq('id', centerId)
-    .single();
+    .single()) as any;
 
   if (centerError || !center || !center.is_active) {
     return { success: false as const, error: 'This center is not currently accepting bookings.' };
   }
 
-  const { data: blockedDay } = await supabase
+  const { data: blockedDay } = (await supabase
     .from('blocked_slots')
     .select('slot_time')
     .eq('center_id', centerId)
     .eq('blocked_date', date)
     .is('slot_time', null)
-    .maybeSingle();
+    .maybeSingle()) as any;
 
   if (blockedDay) {
     // Entire day is blocked (holiday, maintenance, etc.)
     return { success: true as const, data: [] as SlotAvailability[] };
   }
 
-  const [{ data: bookings }, { data: blockedSlots }] = await Promise.all([
+  const [{ data: bookings }, { data: blockedSlots }] = (await Promise.all([
     supabase
       .from('bookings')
       .select('slot_time, services(duration_minutes)')
@@ -116,7 +115,7 @@ export async function getAvailableSlots(input: z.infer<typeof availabilityInputS
       .eq('center_id', centerId)
       .eq('blocked_date', date)
       .not('slot_time', 'is', null),
-  ]);
+  ])) as any;
 
   const grid = center.slot_duration_minutes;
 
@@ -204,21 +203,21 @@ export async function createBooking(input: CreateBookingInput) {
 
   // Price and duration are always re-derived from the database — never trust
   // client-submitted price/duration values.
-  const { data: service, error: serviceError } = await supabase
+  const { data: service, error: serviceError } = (await supabase
     .from('services')
     .select('id, center_id, price, duration_minutes, is_active')
     .eq('id', data.serviceId)
-    .single();
+    .single()) as any;
 
   if (serviceError || !service || !service.is_active || service.center_id !== data.centerId) {
     return { success: false as const, error: 'This service is no longer available.' };
   }
 
-  const { data: center, error: centerError } = await supabase
+  const { data: center, error: centerError } = (await supabase
     .from('centers')
     .select('id, is_active, supports_pickup')
     .eq('id', data.centerId)
-    .single();
+    .single()) as any;
 
   if (centerError || !center || !center.is_active) {
     return { success: false as const, error: 'This center is no longer accepting bookings.' };
@@ -245,8 +244,7 @@ export async function createBooking(input: CreateBookingInput) {
     return { success: false as const, error: 'This slot was just taken. Please pick another time.' };
   }
 
-  const { data: inserted, error: insertError } = await supabase
-    .from('bookings')
+  const { data: inserted, error: insertError } = (await (supabase.from('bookings') as any)
     .insert({
       client_id: user.id,
       center_id: data.centerId,
@@ -255,6 +253,8 @@ export async function createBooking(input: CreateBookingInput) {
       status: 'pending',
       booking_date: data.date,
       slot_time: `${data.time}:00`,
+      customer_name: data.name,
+      customer_phone: data.phone,
       pickup_address: data.bookingType === 'pickup' ? data.pickupAddress : null,
       pickup_latitude: data.bookingType === 'pickup' ? data.pickupLatitude ?? null : null,
       pickup_longitude: data.bookingType === 'pickup' ? data.pickupLongitude ?? null : null,
@@ -267,7 +267,7 @@ export async function createBooking(input: CreateBookingInput) {
     .select(
       'id, booking_date, slot_time, booking_type, status, pickup_address, price_at_booking, created_at, center_id, service_id'
     )
-    .single();
+    .single()) as any;
 
   if (insertError) {
     // Postgres unique_violation — someone else grabbed this exact slot
@@ -280,5 +280,5 @@ export async function createBooking(input: CreateBookingInput) {
 
   revalidatePath(`/booking/${data.centerId}`);
 
-  return { success: true as const, data: inserted as any};
+  return { success: true as const, data: inserted };
 }

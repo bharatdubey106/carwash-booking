@@ -316,3 +316,25 @@ create policy "blocked_slots_admin_full"
   on public.blocked_slots for all
   using (public.current_role() = 'admin')
   with check (public.current_role() = 'admin');
+
+ALTER TABLE public.bookings
+  ADD COLUMN customer_name text NOT NULL DEFAULT '',
+  ADD COLUMN customer_phone text NOT NULL DEFAULT '',
+  ADD COLUMN booking_source text NOT NULL DEFAULT 'online' CHECK (booking_source IN ('online', 'manual'));
+
+ALTER TABLE public.bookings ALTER COLUMN client_id DROP NOT NULL;
+
+-- Lightweight platform-wide config, singleton row pattern
+CREATE TABLE public.platform_settings (
+  id boolean PRIMARY KEY DEFAULT true CHECK (id),
+  whatsapp_number text NOT NULL DEFAULT '919407822022',
+  default_slot_interval_minutes int NOT NULL DEFAULT 30,
+  max_advance_days int NOT NULL DEFAULT 60,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+INSERT INTO public.platform_settings (id) VALUES (true) ON CONFLICT DO NOTHING;
+
+ALTER TABLE public.platform_settings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "platform_settings_admin_full" ON public.platform_settings FOR ALL
+  USING (public.current_role() = 'admin') WITH CHECK (public.current_role() = 'admin');
+CREATE POLICY "platform_settings_public_read" ON public.platform_settings FOR SELECT USING (true);
